@@ -1,23 +1,183 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Search Player</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.search-box {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input {
+    width: 60%;
+    max-width: 500px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+#player {
+    width: 100%;
+    max-width: 1000px;
+    margin: 20px auto;
+    min-height: 500px;
+}
+
+.results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(300px,1fr));
+    gap: 15px;
+}
+
+.video-card {
+    background: #222;
+    border-radius: 10px;
+    overflow: hidden;
+    padding-bottom: 10px;
+}
+
+.video-card img {
+    width: 100%;
+    display: block;
+}
+
+.video-card h3 {
+    font-size: 14px;
+    padding: 10px;
+    margin: 0;
+}
+
+.video-card p {
+    font-size: 12px;
+    color: #aaa;
+    padding: 0 10px;
+}
+
+.video-card button {
+    margin-left: 10px;
+    margin-top: 5px;
+}
+</style>
+</head>
 <body>
 
-<button onclick="playVideo()">Play Test Video</button>
+<h1>YouTube Search</h1>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search YouTube...">
+    <button onclick="searchVideos()">Search</button>
+</div>
 
 <div id="player"></div>
 
+<div id="results" class="results"></div>
+
 <script>
-function playVideo() {
+
+const API_KEY = "AIzaSyB7x5zyGdt3_9JnaIWqQYrvNkcB6lef_xA";
+
+async function searchVideos() {
+
+    const query = document.getElementById("searchInput").value.trim();
+
+    if (!query) return;
+
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = "Loading...";
+
+    try {
+
+        const url =
+            `https://www.googleapis.com/youtube/v3/search` +
+            `?part=snippet` +
+            `&maxResults=20` +
+            `&type=video` +
+            `&q=${encodeURIComponent(query)}` +
+            `&key=${API_KEY}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        resultsDiv.innerHTML = "";
+
+        if (!data.items) {
+            resultsDiv.innerHTML = "No videos found.";
+            return;
+        }
+
+        data.items.forEach(item => {
+
+            const videoId = item.id.videoId;
+
+            const card = document.createElement("div");
+            card.className = "video-card";
+
+            card.innerHTML = `
+                <img src="${item.snippet.thumbnails.medium.url}">
+                <h3>${item.snippet.title}</h3>
+                <p>${item.snippet.channelTitle}</p>
+
+                <button onclick="playVideo('${videoId}')">
+                    ▶ Play Here
+                </button>
+
+                <button onclick="window.open('https://www.youtube.com/watch?v=${videoId}','_blank')">
+                    Open Video
+                </button>
+
+                <button onclick="window.open('https://www.youtube.com/shorts/${videoId}','_blank')">
+                    Open Short
+                </button>
+            `;
+
+            resultsDiv.appendChild(card);
+        });
+
+    } catch(err) {
+        console.error(err);
+        resultsDiv.innerHTML = "Error loading videos.";
+    }
+}
+
+function playVideo(videoId) {
+
     document.getElementById("player").innerHTML = `
         <iframe
-            width="800"
-            height="450"
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
-            allow="autoplay; encrypted-media"
+            width="100%"
+            height="500"
+            src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+            title="YouTube Video Player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen>
         </iframe>
     `;
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 }
+
 </script>
 
 </body>
