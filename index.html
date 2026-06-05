@@ -140,7 +140,6 @@ h1{
 }
 
 /* Top-right controls */
-
 .top-controls{
     position:fixed;
     top:15px;
@@ -151,9 +150,11 @@ h1{
     z-index:9999;
 }
 
+/* Hub button left, then input, then Play button */
 .id-row{
     display:flex;
     gap:6px;
+    align-items:center;
 }
 
 .id-row input{
@@ -163,6 +164,11 @@ h1{
     border:1px solid #444;
     border-radius:8px;
     color:white;
+    outline:none;
+}
+
+.id-row input:focus{
+    border-color:#888;
 }
 
 .id-row button,
@@ -173,6 +179,7 @@ h1{
     border-radius:8px;
     color:white;
     cursor:pointer;
+    white-space:nowrap;
 }
 
 .id-row button:hover,
@@ -185,20 +192,18 @@ h1{
 <body>
 
 <div class="top-controls">
-
     <div class="id-row">
+        <!-- Hub button is now on the LEFT -->
+        <button class="hub-btn" onclick="openHubInNewTab()">Open Hub In New Tab</button>
+
         <input
             type="text"
             id="idInput"
             placeholder="Video ID or URL"
             onkeydown="if(event.key==='Enter')playById()">
+
         <button onclick="playById()">▶ Play</button>
     </div>
-
-    <button class="hub-btn" onclick="openHubInNewTab()">
-        Open Hub In New Tab
-    </button>
-
 </div>
 
 <h1>YouTube Search</h1>
@@ -212,9 +217,7 @@ h1{
         placeholder="Search YouTube..."
         onkeydown="if(event.key==='Enter')searchVideos()">
 
-    <button onclick="searchVideos()">
-        Search
-    </button>
+    <button onclick="searchVideos()">Search</button>
 </div>
 
 <div id="player"></div>
@@ -224,35 +227,21 @@ h1{
 const API_KEY = "AIzaSyB7x5zyGdt3_9JnaIWqQYrvNkcB6lef_xA";
 
 function extractVideoId(raw){
-
     let id = raw;
-
     try{
         const url = new URL(raw);
-
-        id =
-            url.searchParams.get("v") ||
-            url.pathname.split("/").pop();
-
+        id = url.searchParams.get("v") || url.pathname.split("/").pop();
     }catch(e){}
-
     return id;
 }
 
 function playById(){
-
-    const raw =
-        document.getElementById("idInput")
-        .value
-        .trim();
-
+    const raw = document.getElementById("idInput").value.trim();
     if(!raw) return;
-
     playVideo(extractVideoId(raw));
 }
 
 function playVideo(videoId){
-
     document.getElementById("player").innerHTML = `
         <iframe
             src="https://www.youtube.com/embed/${videoId}?autoplay=1"
@@ -260,101 +249,66 @@ function playVideo(videoId){
             allowfullscreen>
         </iframe>
     `;
-
-    window.scrollTo({
-        top:0,
-        behavior:"smooth"
-    });
+    window.scrollTo({ top:0, behavior:"smooth" });
 }
 
 async function searchVideos(){
-
-    const query =
-        document.getElementById("searchInput")
-        .value
-        .trim();
-
+    const query = document.getElementById("searchInput").value.trim();
     if(!query) return;
 
-    const resultsDiv =
-        document.getElementById("results");
-
-    resultsDiv.innerHTML =
-        '<p class="status">Loading...</p>';
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = '<p class="status">Loading...</p>';
 
     try{
-
-        const url =
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&type=video&q=${encodeURIComponent(query)}&key=${API_KEY}`;
-
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&type=video&q=${encodeURIComponent(query)}&key=${API_KEY}`;
         const res = await fetch(url);
         const data = await res.json();
 
         resultsDiv.innerHTML = "";
 
         if(!data.items || !data.items.length){
-
-            resultsDiv.innerHTML =
-                '<p class="status">No videos found.</p>';
-
+            resultsDiv.innerHTML = '<p class="status">No videos found.</p>';
             return;
         }
 
         data.items.forEach(item => {
-
-            const vid =
-                item.id.videoId;
-
-            const card =
-                document.createElement("div");
-
-            card.className =
-                "card";
-
+            const vid = item.id.videoId;
+            const card = document.createElement("div");
+            card.className = "card";
             card.innerHTML = `
                 <img src="${item.snippet.thumbnails.medium.url}">
                 <div class="card-body">
                     <h3>${item.snippet.title}</h3>
                     <p>${item.snippet.channelTitle}</p>
-
                     <div class="card-btns">
-
-                        <button onclick="playVideo('${vid}')">
-                            ▶ Play Here
-                        </button>
-
-                        <button onclick="window.open('https://www.youtube.com/watch?v=${vid}','_blank')">
-                            Open Video
-                        </button>
-
-                        <button onclick="window.open('https://www.youtube.com/shorts/${vid}','_blank')">
-                            Open Short
-                        </button>
-
+                        <button onclick="playVideo('${vid}')">▶ Play Here</button>
+                        <button onclick="window.open('https://www.youtube.com/watch?v=${vid}','_blank')">Open Video</button>
+                        <button onclick="window.open('https://www.youtube.com/shorts/${vid}','_blank')">Open Short</button>
                     </div>
                 </div>
             `;
-
             resultsDiv.appendChild(card);
         });
 
     }catch(err){
-
-        resultsDiv.innerHTML =
-            '<p class="status">Error loading videos.</p>';
+        resultsDiv.innerHTML = '<p class="status">Error loading videos.</p>';
     }
 }
 
 function openHubInNewTab(){
+    // Grab this page's full HTML
+    const pageHTML = document.documentElement.outerHTML;
 
-    window.open(
-        window.location.href,
-        "_blank"
-    );
+    // Open a blank new tab and write the page into it
+    const newTab = window.open("about:blank", "_blank");
+    if(newTab){
+        newTab.document.open();
+        newTab.document.write(pageHTML);
+        newTab.document.close();
+    }
 
-    location.replace(
-        "https://www.google.com"
-    );
+    // Replace current tab with Google so it drops out of history
+    location.replace("https://www.google.com");
 }
 </script>
 
