@@ -4,181 +4,124 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YouTube Search Player</title>
-
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #111;
-    color: white;
-    margin: 0;
-    padding: 20px;
-}
-
-h1 {
-    text-align: center;
-}
-
-.search-box {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-input {
-    width: 60%;
-    max-width: 500px;
-    padding: 10px;
-    font-size: 16px;
-}
-
-button {
-    padding: 10px 15px;
-    cursor: pointer;
-}
-
-#player {
-    width: 100%;
-    max-width: 1000px;
-    margin: 20px auto;
-    min-height: 500px;
-}
-
-.results {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(300px,1fr));
-    gap: 15px;
-}
-
-.video-card {
-    background: #222;
-    border-radius: 10px;
-    overflow: hidden;
-    padding-bottom: 10px;
-}
-
-.video-card img {
-    width: 100%;
-    display: block;
-}
-
-.video-card h3 {
-    font-size: 14px;
-    padding: 10px;
-    margin: 0;
-}
-
-.video-card p {
-    font-size: 12px;
-    color: #aaa;
-    padding: 0 10px;
-}
-
-.video-card button {
-    margin-left: 10px;
-    margin-top: 5px;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #111; color: white; padding: 20px; }
+h1 { text-align: center; margin-bottom: 1rem; font-size: 22px; }
+.section-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.search-row input { flex: 1; padding: 9px 12px; background: #222; border: 0.5px solid #444; border-radius: 8px; color: #fff; font-size: 14px; outline: none; }
+.search-row input:focus { border-color: #888; }
+.search-row button { padding: 9px 14px; background: #333; border: 0.5px solid #555; border-radius: 8px; color: #fff; cursor: pointer; font-size: 14px; white-space: nowrap; }
+.search-row button:hover { background: #444; }
+#player { width: 100%; margin-bottom: 1rem; }
+#player iframe { width: 100%; height: 500px; border: none; border-radius: 10px; display: block; }
+.results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+.card { background: #222; border-radius: 10px; overflow: hidden; }
+.card img { width: 100%; display: block; }
+.card-body { padding: 10px; }
+.card-body h3 { font-size: 13px; margin-bottom: 4px; line-height: 1.4; }
+.card-body p { font-size: 12px; color: #aaa; margin-bottom: 8px; }
+.card-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.card-btns button { font-size: 12px; padding: 5px 9px; background: #333; border: 0.5px solid #555; border-radius: 6px; color: #fff; cursor: pointer; }
+.card-btns button:hover { background: #444; }
+.status { color: #aaa; font-size: 14px; padding: 1rem 0; }
 </style>
 </head>
 <body>
-
 <h1>YouTube Search</h1>
 
-<div class="search-box">
-    <input type="text" id="searchInput" placeholder="Search YouTube...">
-    <button onclick="searchVideos()">Search</button>
+<div class="section-label">Search by keyword</div>
+<div class="search-row">
+  <input type="text" id="searchInput" placeholder="Search YouTube…" onkeydown="if(event.key==='Enter')searchVideos()">
+  <button onclick="searchVideos()">Search</button>
+</div>
+
+<div class="section-label">Play by video ID</div>
+<div class="search-row" style="margin-bottom:20px">
+  <input type="text" id="idInput" placeholder="e.g. dQw4w9WgXcQ" onkeydown="if(event.key==='Enter')playById()">
+  <button onclick="playById()">▶ Play</button>
 </div>
 
 <div id="player"></div>
-
 <div id="results" class="results"></div>
 
 <script>
+const API_KEY = "YOUR_API_KEY_HERE";
 
-const API_KEY = "AIzaSyB7x5zyGdt3_9JnaIWqQYrvNkcB6lef_xA";
+function playById() {
+  const raw = document.getElementById("idInput").value.trim();
+  if (!raw) return;
+  let id = raw;
+  try {
+    const u = new URL(raw);
+    id = u.searchParams.get("v") || u.pathname.split("/").pop();
+  } catch(e) {}
+  playVideo(id);
+}
 
 async function searchVideos() {
-
-    const query = document.getElementById("searchInput").value.trim();
-
-    if (!query) return;
-
-    const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = "Loading...";
-
-    try {
-
-        const url =
-            `https://www.googleapis.com/youtube/v3/search` +
-            `?part=snippet` +
-            `&maxResults=20` +
-            `&type=video` +
-            `&q=${encodeURIComponent(query)}` +
-            `&key=${API_KEY}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        resultsDiv.innerHTML = "";
-
-        if (!data.items) {
-            resultsDiv.innerHTML = "No videos found.";
-            return;
-        }
-
-        data.items.forEach(item => {
-
-            const videoId = item.id.videoId;
-
-            const card = document.createElement("div");
-            card.className = "video-card";
-
-            card.innerHTML = `
-                <img src="${item.snippet.thumbnails.medium.url}">
-                <h3>${item.snippet.title}</h3>
-                <p>${item.snippet.channelTitle}</p>
-
-                <button onclick="playVideo('${videoId}')">
-                    ▶ Play Here
-                </button>
-
-                <button onclick="window.open('https://www.youtube.com/watch?v=${videoId}','_blank')">
-                    Open Video
-                </button>
-
-                <button onclick="window.open('https://www.youtube.com/shorts/${videoId}','_blank')">
-                    Open Short
-                </button>
-            `;
-
-            resultsDiv.appendChild(card);
-        });
-
-    } catch(err) {
-        console.error(err);
-        resultsDiv.innerHTML = "Error loading videos.";
+  const query = document.getElementById("searchInput").value.trim();
+  if (!query) return;
+  const resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = '<p class="status">Loading…</p>';
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&type=video&q=${encodeURIComponent(query)}&key=${API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    resultsDiv.innerHTML = "";
+    if (!data.items || !data.items.length) {
+      resultsDiv.innerHTML = '<p class="status">No videos found.</p>';
+      return;
     }
+    data.items.forEach(item => {
+      const vid = item.id.videoId;
+      const card = document.createElement("div");
+      card.className = "card";
+      const img = document.createElement("img");
+      img.src = item.snippet.thumbnails.medium.url;
+      img.alt = "";
+      const body = document.createElement("div");
+      body.className = "card-body";
+      const title = document.createElement("h3");
+      title.textContent = item.snippet.title;
+      const channel = document.createElement("p");
+      channel.textContent = item.snippet.channelTitle;
+      const btns = document.createElement("div");
+      btns.className = "card-btns";
+      const playBtn = document.createElement("button");
+      playBtn.textContent = "▶ Play here";
+      playBtn.onclick = () => playVideo(vid);
+      const openBtn = document.createElement("button");
+      openBtn.textContent = "Open video";
+      openBtn.onclick = () => window.open(`https://www.youtube.com/watch?v=${vid}`, "_blank");
+      const shortBtn = document.createElement("button");
+      shortBtn.textContent = "Open short";
+      shortBtn.onclick = () => window.open(`https://www.youtube.com/shorts/${vid}`, "_blank");
+      btns.appendChild(playBtn);
+      btns.appendChild(openBtn);
+      btns.appendChild(shortBtn);
+      body.appendChild(title);
+      body.appendChild(channel);
+      body.appendChild(btns);
+      card.appendChild(img);
+      card.appendChild(body);
+      resultsDiv.appendChild(card);
+    });
+  } catch(err) {
+    resultsDiv.innerHTML = '<p class="status">Error loading videos.</p>';
+  }
 }
 
 function playVideo(videoId) {
-
-    document.getElementById("player").innerHTML = `
-        <iframe
-            width="100%"
-            height="500"
-            src="https://www.youtube.com/embed/${videoId}?autoplay=1"
-            title="YouTube Video Player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen>
-        </iframe>
-    `;
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
+  document.getElementById("player").innerHTML = `
+    <iframe
+      src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen>
+    </iframe>`;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
-
 </script>
-
 </body>
 </html>
